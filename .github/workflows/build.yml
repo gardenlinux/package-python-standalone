@@ -1,0 +1,215 @@
+name: build
+
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
+
+env:
+  UPSTREAM_REPO: astral-sh/python-build-standalone
+  UPSTREAM_TAG: "20260901"
+  PYTHON_VERSION: "3.14"
+  BUILD_OPTIONS: "pgo+lto"
+
+jobs:
+  build-x86_64:
+    name: Build cpython ${{ env.PYTHON_VERSION }} x86_64
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout patch repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: patch-repo
+
+      - name: Checkout upstream python-build-standalone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.UPSTREAM_REPO }}
+          ref: ${{ env.UPSTREAM_TAG }}
+          path: python-build-standalone
+
+      - name: Apply no-libdb patch
+        run: |
+          cd python-build-standalone
+          patch -p1 < ../patch-repo/patches/no-libdb.patch
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Cache Rust build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            python-build-standalone/target
+          key: ${{ runner.os }}-x86_64-pythonbuild-${{ hashFiles('python-build-standalone/Cargo.lock') }}
+
+      - name: Build pythonbuild tool
+        run: |
+          cd python-build-standalone
+          cargo build --release
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Generate Dockerfiles
+        run: |
+          cd python-build-standalone
+          uv run ./build.py --make-target empty
+
+      - name: Build Docker image
+        run: |
+          cd python-build-standalone
+          docker build \
+            --tag cpython-build-x86_64 \
+            --file build/build.debian13-x86_64.Dockerfile \
+            .
+          # Save image id and tar in the format pythonbuild expects:
+          # build/image-<name>.linux_<arch> and build/image-<name>.linux_<arch>.tar
+          mkdir -p build
+          docker inspect --format='{{.Id}}' cpython-build-x86_64 \
+            > build/image-build.debian13-x86_64.linux_x86_64
+          docker save cpython-build-x86_64 \
+            | zstd -T0 -6 > build/image-build.debian13-x86_64.linux_x86_64.tar.zst
+
+      - name: Build CPython ${{ env.PYTHON_VERSION }} x86_64
+        run: |
+          cd python-build-standalone
+          uv run ./build.py \
+            --target-triple x86_64-unknown-linux-gnu \
+            --python cpython-${{ env.PYTHON_VERSION }} \
+            --options ${{ env.BUILD_OPTIONS }}
+
+      - name: Upload x86_64 artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist-x86_64
+          path: python-build-standalone/dist/cpython-*x86_64-unknown-linux-gnu-install_only.tar.gz
+          retention-days: 1
+
+  build-aarch64:
+    name: Build cpython ${{ env.PYTHON_VERSION }} aarch64
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout patch repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: patch-repo
+
+      - name: Checkout upstream python-build-standalone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.UPSTREAM_REPO }}
+          ref: ${{ env.UPSTREAM_TAG }}
+          path: python-build-standalone
+
+      - name: Apply no-libdb patch
+        run: |
+          cd python-build-standalone
+          patch -p1 < ../patch-repo/patches/no-libdb.patch
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Cache Rust build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            python-build-standalone/target
+          key: ${{ runner.os }}-aarch64-pythonbuild-${{ hashFiles('python-build-standalone/Cargo.lock') }}
+
+      - name: Build pythonbuild tool
+        run: |
+          cd python-build-standalone
+          cargo build --release
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Generate Dockerfiles
+        run: |
+          cd python-build-standalone
+          uv run ./build.py --make-target empty
+
+      - name: Build Docker image
+        run: |
+          cd python-build-standalone
+          docker build \
+            --tag cpython-build-aarch64 \
+            --file build/build.debian13.Dockerfile \
+            .
+          mkdir -p build
+          docker inspect --format='{{.Id}}' cpython-build-aarch64 \
+            > build/image-build.debian13.linux_aarch64
+          docker save cpython-build-aarch64 \
+            | zstd -T0 -6 > build/image-build.debian13.linux_aarch64.tar.zst
+
+      - name: Build CPython ${{ env.PYTHON_VERSION }} aarch64
+        run: |
+          cd python-build-standalone
+          uv run ./build.py \
+            --target-triple aarch64-unknown-linux-gnu \
+            --python cpython-${{ env.PYTHON_VERSION }} \
+            --options ${{ env.BUILD_OPTIONS }}
+
+      - name: Upload aarch64 artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist-aarch64
+          path: python-build-standalone/dist/cpython-*aarch64-unknown-linux-gnu-install_only.tar.gz
+          retention-days: 1
+
+  release:
+    name: Publish release
+    needs: [build-x86_64, build-aarch64]
+    runs-on: ubuntu-24.04
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - name: Download x86_64 artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dist-x86_64
+          path: dist
+
+      - name: Download aarch64 artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dist-aarch64
+          path: dist
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          # Extract date tag from artifact filename
+          # e.g. cpython-3.14.7+20260901-x86_64-...-install_only.tar.gz → 20260901
+          f=$(ls dist/cpython-*x86_64*install_only.tar.gz | head -1)
+          base=$(basename "$f")
+          tag=$(echo "$base" | sed 's/.*+\([0-9]\{8\}\)-.*/\1/')
+          version=$(echo "$base" | sed 's/cpython-\([0-9]*\.[0-9]*\.[0-9]*\)+.*/\1/')
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ steps.tag.outputs.tag }}"
+          version="${{ steps.tag.outputs.version }}"
+
+          # Skip if release already exists
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Release $tag already exists, skipping."
+            exit 0
+          fi
+
+          gh release create "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "cpython ${version}+${tag} (no-libdb)" \
+            --notes "CPython ${version} built from [astral-sh/python-build-standalone@${tag}](https://github.com/astral-sh/python-build-standalone/releases/tag/${tag}) with Oracle Berkeley DB (libdb) removed. Patch: [\`patches/no-libdb.patch\`](patches/no-libdb.patch)" \
+            dist/cpython-*install_only.tar.gz
