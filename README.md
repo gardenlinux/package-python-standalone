@@ -1,4 +1,4 @@
-# package-python-standalone
+# python-build-standalone
 
 Builds a compliance-clean [CPython standalone](https://github.com/astral-sh/python-build-standalone) distribution for use in the [Garden Linux](https://github.com/gardenlinux/gardenlinux) test framework.
 
@@ -26,7 +26,7 @@ cpython-3.14.7+20260901-x86_64-unknown-linux-gnu-install_only.tar.gz
 cpython-3.14.7+20260901-aarch64-unknown-linux-gnu-install_only.tar.gz
 ```
 
-This means `build_runtime.sh` and `update_runtime.py` in the Garden Linux test framework require **no changes** — only `PYTHON_REPO_OWNER` and `PYTHON_REPO_NAME` in `tests/util/python.env.sh` are updated to point here instead of `astral-sh/python-build-standalone`.
+This means `build_runtime.sh` and `update_runtime.py` in the Garden Linux test framework require **no changes** — only `PYTHON_REPO_OWNER` and `PYTHON_REPO_NAME` in `tests/util/python.env.sh` are updated to point to `gardenlinux/python-build-standalone` instead of `astral-sh/python-build-standalone`.
 
 ## Build
 
