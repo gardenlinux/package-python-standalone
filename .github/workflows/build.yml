@@ -228,4 +228,4 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "cpython ${version}+${tag} (no-libdb)" \
             --notes "CPython ${version} built from [astral-sh/python-build-standalone@${tag}](https://github.com/astral-sh/python-build-standalone/releases/tag/${tag}) with Oracle Berkeley DB (libdb) removed. Patch: [\`patches/no-libdb.patch\`](patches/no-libdb.patch)" \
-            dist/cpython-*install_only.tar.gz
+            dist/cpython-*install_only*.tar.gz
