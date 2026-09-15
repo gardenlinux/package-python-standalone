@@ -1,7 +1,6 @@
---- a/cpython-unix/build-cpython.sh
-+++ b/cpython-unix/build-cpython.sh
-@@ -644,9 +644,12 @@ fi
- # We use ndbm on macOS and BerkeleyDB elsewhere.
+--- a/cpython-unix/build-cpython.sh	2026-09-15 10:29:28
++++ b/cpython-unix/build-cpython.sh	2026-09-15 10:29:28
+@@ -648,7 +648,10 @@
  if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
      CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-dbmliborder=ndbm"
  else
@@ -11,9 +10,14 @@
 +    export ac_cv_have_libdb=no
 +    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-dbmliborder=gdbm"
  fi
-
-@@ -1396,7 +1399,7 @@ fi
-
+ 
+ if [ -n "${CROSS_COMPILING}" ]; then
+@@ -1390,7 +1393,7 @@
+ fi
+ 
  # And prune libraries we never reference.
 -rm -f "${ROOT}/out/python/build/lib"/{libdb-6.0,libxcb-*,libX11-xcb}.a
 +rm -f "${ROOT}/out/python/build/lib"/{libxcb-*,libX11-xcb}.a
+ 
+ if [ -d "${TOOLS_PATH}/deps/lib/tcl9" ]; then
+     # Copy tcl/tk resources needed by tkinter.
