@@ -1,23 +1,27 @@
---- a/cpython-unix/build-cpython.sh	2026-09-15 10:29:28
-+++ b/cpython-unix/build-cpython.sh	2026-09-15 10:29:28
-@@ -648,7 +648,10 @@
+--- a/cpython-unix/build-cpython.sh
++++ b/cpython-unix/build-cpython.sh
+@@ -644,11 +644,13 @@
+     PROFILE_TASK="${PROFILE_TASK} --ignore test.test_bytes.BytesTest.test_from_format"
+ fi
+
+-# We use ndbm on macOS and BerkeleyDB elsewhere.
++# We use ndbm on macOS. On Linux, Oracle Berkeley DB (libdb) is not
++# permitted for SAP compliance. Disable the legacy _dbm module entirely by
++# passing an empty dbmliborder so no dbm backend is linked.
  if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
      CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-dbmliborder=ndbm"
  else
 -    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-dbmliborder=bdb"
-+    # SAP compliance: Oracle Berkeley DB (libdb) is not permitted.
-+    # Use gdbm only and disable libdb detection entirely.
-+    export ac_cv_have_libdb=no
-+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-dbmliborder=gdbm"
++    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-dbmliborder="
  fi
- 
+
  if [ -n "${CROSS_COMPILING}" ]; then
-@@ -1390,7 +1393,7 @@
+@@ -1390,7 +1392,7 @@
  fi
- 
+
  # And prune libraries we never reference.
 -rm -f "${ROOT}/out/python/build/lib"/{libdb-6.0,libxcb-*,libX11-xcb}.a
 +rm -f "${ROOT}/out/python/build/lib"/{libxcb-*,libX11-xcb}.a
- 
+
  if [ -d "${TOOLS_PATH}/deps/lib/tcl9" ]; then
      # Copy tcl/tk resources needed by tkinter.
