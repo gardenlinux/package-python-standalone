@@ -14,7 +14,7 @@ env:
 
 jobs:
   build-x86_64:
-    name: Build cpython ${{ env.PYTHON_VERSION }} x86_64
+    name: Build cpython 3.14 x86_64
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout patch repo
@@ -90,7 +90,7 @@ jobs:
           retention-days: 1
 
   build-aarch64:
-    name: Build cpython ${{ env.PYTHON_VERSION }} aarch64
+    name: Build cpython 3.14 aarch64
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout patch repo
