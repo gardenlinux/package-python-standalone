@@ -1,6 +1,15 @@
 --- a/cpython-unix/build-cpython.sh
 +++ b/cpython-unix/build-cpython.sh
-@@ -644,11 +644,13 @@
+@@ -67,6 +67,8 @@
+ SETUPTOOLS_WHEEL="${ROOT}/setuptools-${SETUPTOOLS_VERSION}-py3-none-any.whl"
+
+ cat Setup.local
++# SAP compliance: remove _dbm (uses libdb/BDB) before injecting Setup.local
++sed -i '/^_dbm /d' Setup.local
+ mv Setup.local "Python-${PYTHON_VERSION}/Modules/Setup.local"
+
+ cat Makefile.extra
+@@ -644,11 +646,13 @@
      PROFILE_TASK="${PROFILE_TASK} --ignore test.test_bytes.BytesTest.test_from_format"
  fi
 
@@ -16,7 +25,7 @@
  fi
 
  if [ -n "${CROSS_COMPILING}" ]; then
-@@ -1390,7 +1392,7 @@
+@@ -1390,7 +1394,7 @@
  fi
 
  # And prune libraries we never reference.
